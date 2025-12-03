@@ -1,0 +1,140 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  categories Category[]
+  expenses   Expense[]
+  budgets    Budget[]
+  goals      Goal[]
+  thresholds NotificationThreshold[]
+
+  @@map("users")
+}
+
+model Category {
+  id          String @id @default(cuid())
+  name        String
+  description String?
+  color       String?
+  icon        String?
+  userId      String
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses Expense[]
+  budgets  Budget[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("categories")
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  description String
+  amount      Float
+  date        DateTime
+  categoryId  String
+  userId      String
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("expenses")
+}
+
+model Budget {
+  id          String  @id @default(cuid())
+  categoryId  String
+  amount      Float
+  name        String?
+  period      String  @default("monthly")
+  userId      String
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  thresholds NotificationThreshold[]
+
+  @@map("budgets")
+}
+
+model NotificationThreshold {
+  id         String @id @default(cuid())
+  budgetId   String
+  threshold  Int    // Percentage (1-100)
+  type       String @default("email") // Only email supported
+  enabled    Boolean @default(true)
+  userId     String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  budget Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notification_thresholds")
+}
+
+model Notification {
+  id                     String @id @default(cuid())
+  notificationThresholdId String
+  sentAt                 DateTime
+  type                   String // 'email'
+  status                 String // 'sent', 'failed'
+  messageId              String? // For tracking email
+  content                String
+
+  threshold NotificationThreshold @relation(fields: [notificationThresholdId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
+
+model Goal {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  targetAmount Float
+  currentAmount Float   @default(0)
+  targetDate  DateTime
+  priority    String   @default("medium")
+  status      String   @default("active")
+  userId      String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("goals")
+}
